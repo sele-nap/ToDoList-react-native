@@ -1,7 +1,7 @@
 
 ## ToDo List React-Native with Expo and Typescript
 
-## Installation and Setup Instructions
+## Installation and Setup Instructions 
 
 #### Example:  
 
