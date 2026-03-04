@@ -1,184 +1,149 @@
-import React, { useState, useEffect } from "react";
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  Button, 
-  ScrollView, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
-  SafeAreaView } from "react-native";
-import Header from './src/components/Header';
-import { Notes } from './src/types/index';
-import { updateAsyncStorage } from './src/utils/updateAsyncStorage';
-import { loadFromAsyncStorange } from './src/utils/loadFromAsyncStorange';
+import React, { useState, useEffect, useCallback } from 'react'
+import { StatusBar, TouchableOpacity, StyleSheet } from 'react-native'
+import { SafeAreaView } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
+import * as Haptics from 'expo-haptics'
+import { useFonts, Cinzel_400Regular, Cinzel_700Bold } from '@expo-google-fonts/cinzel'
+import { TamaguiProvider, YStack, Text } from 'tamagui'
+import { Sparkles } from '@tamagui/lucide-icons'
 
+import tamaguiConfig from './tamagui.config'
+import Header from './src/components/Header'
+import TodoItem from './src/components/TodoItem'
+import AddTodoModal from './src/components/AddTodoModal'
+import { Todo, Priority } from './src/types'
+import { loadTodos, saveTodos } from './src/utils/storage'
 
-interface Props {}
+const App: React.FC = () => {
+  const [todos, setTodos] = useState<Todo[]>([])
+  const [isDark, setIsDark] = useState(true)
+  const [modalVisible, setModalVisible] = useState(false)
 
-const App: React.FC<Props> = () => {
-  const [value, setValue] = useState<string>("");
-  const [toDoList, setToDos] = useState<Notes[]>([]);
-  const [error, showError] = useState<Boolean>(false);
-
-  // read the local storage and fill the state
-  const readStorage = async() => {
-    const data = await loadFromAsyncStorange();
-    if(data){
-      setToDos(data);
-    }
-  }
-  
-  //handle submit for new taks
-  const handleSubmit = async () => {
-    if (value.trim()){
-      setToDos([...toDoList, { text: value, completed: false }]);
-      await updateAsyncStorage([...toDoList]);
-    }
-    else showError(true);
-    setValue("");
-  };
-
-  //remove one taks
-  const removeItem = async (index: number) => {
-    const newToDoList = [...toDoList];
-    newToDoList.splice(index, 1);
-    setToDos(newToDoList);
-    await updateAsyncStorage([...newToDoList]);
-  };
-
-  //complete or not the taks
-  const toggleComplete = async (index: number) => {
-    const newToDoList = [...toDoList];
-    newToDoList[index].completed = !newToDoList[index].completed;
-    setToDos(newToDoList);
-    await updateAsyncStorage([...newToDoList]);
-  };
+  const [fontsLoaded] = useFonts({ Cinzel_400Regular, Cinzel_700Bold })
 
   useEffect(() => {
-    readStorage();
-  }, []);
+    loadTodos().then(setTodos)
+  }, [])
+
+  const persistAndSet = useCallback((updated: Todo[]) => {
+    setTodos(updated)
+    saveTodos(updated)
+  }, [])
+
+  const handleAdd = (text: string, priority: Priority, dueDate?: string) => {
+    const newTodo: Todo = {
+      id: Date.now().toString(),
+      text,
+      priority,
+      dueDate,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    }
+    persistAndSet([newTodo, ...todos])
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+  }
+
+  const handleToggleComplete = (id: string) => {
+    const updated = todos.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+    persistAndSet(updated)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  }
+
+  const handleDelete = (id: string) => {
+    const updated = todos.filter((t) => t.id !== id)
+    persistAndSet(updated)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+  }
+
+  const completedCount = todos.filter((t) => t.completed).length
+  const bgColor = isDark ? '#0d0814' : '#faf5ff'
+
+  const renderItem = ({ item, drag, isActive }: RenderItemParams<Todo>) => (
+    <ScaleDecorator>
+      <TodoItem
+        todo={item}
+        fontsLoaded={fontsLoaded}
+        onToggleComplete={() => handleToggleComplete(item.id)}
+        onDelete={() => handleDelete(item.id)}
+        drag={drag}
+        isActive={isActive}
+      />
+    </ScaleDecorator>
+  )
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Header />
-      <ScrollView style={styles.scrollView}>
-        {toDoList.map((toDo: Notes, index: number) => (
-          <View key={`${index}_${toDo.text}`}>
-            <Text
-              style={[
-                styles.note,
-                { textDecorationLine: toDo.completed ? "line-through" : "none" }
-              ]}
-            >
-              {toDo.text}
-            </Text>
-            <Button
-              title={toDo.completed ? "Completed" : "Complete"}
-              onPress={() => toggleComplete(index)}
-            />
-            <Button
-              title="X"
-              onPress={() => {
-                removeItem(index);
-              }}
-              color="crimson"
-            />
-          </View>
-        ))}
-      </ScrollView>
-      <KeyboardAvoidingView 
-            style={styles.footer}
-            behavior="position" 
-            enabled={true}
-        >
-        <View style={styles.footerInner}>
-          <TouchableOpacity 
-          style={styles.btn}
-          onPress={handleSubmit}
-          >
-            <Text style={styles.btnText}>+</Text>
-          </TouchableOpacity>
-          {error && (
-            <Text style={styles.error}>Error: Input field is empty...</Text>
-          )}
-          <TextInput
-            placeholder="Enter your todo task..."
-            value={value}
-            onChangeText={e => {
-              setValue(e);
-              showError(false);
-            }}
-            style={styles.textInput}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <TamaguiProvider config={tamaguiConfig} defaultTheme={isDark ? 'dark' : 'light'}>
+        <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+          <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bgColor} />
+
+          <Header
+            isDark={isDark}
+            fontsLoaded={fontsLoaded}
+            onToggleTheme={() => setIsDark((prev) => !prev)}
+            completedCount={completedCount}
+            totalCount={todos.length}
           />
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+
+          <DraggableFlatList
+            data={todos}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            onDragEnd={({ data }) => persistAndSet(data)}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <YStack alignItems="center" paddingTop="$10" gap="$3">
+                <Text fontSize={52}>🔮</Text>
+                <Text
+                  color="$color10"
+                  fontSize="$4"
+                  fontFamily={fontsLoaded ? 'Cinzel_400Regular' : undefined}
+                  textAlign="center"
+                >
+                  Your grimoire is empty…{'\n'}Add your first spell below.
+                </Text>
+              </YStack>
+            }
+          />
+
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: isDark ? '#7c3aed' : '#6d28d9', shadowColor: '#7c3aed' }]}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Sparkles color="white" size={26} />
+          </TouchableOpacity>
+
+          <AddTodoModal
+            visible={modalVisible}
+            fontsLoaded={fontsLoaded}
+            onClose={() => setModalVisible(false)}
+            onAdd={handleAdd}
+          />
+        </SafeAreaView>
+      </TamaguiProvider>
+    </GestureHandlerRootView>
+  )
 }
 
 const styles = StyleSheet.create({
-  error: {
-    backgroundColor: '#cc0011',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  container: {
-    flex: 1,
-    position: 'relative'
-  },
-  scrollView: {
-      maxHeight: '82%',
-      marginBottom: 100,
-      backgroundColor: '#fff'
-  },
-  note: {
-      margin: 20,
-      padding: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 0.5,
-      backgroundColor: '#f9f9f9',
-  },
-  btn: {
-    zIndex: 1,
+  container: { flex: 1 },
+  listContent: { paddingTop: 12, paddingBottom: 120 },
+  fab: {
     position: 'absolute',
     right: 20,
-    top: -50,
-    width: 100,
-    height: 100,
-    borderRadius: 10,
+    bottom: 32,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-    backgroundColor: '#674ea7'
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  btnText: {
-      color: '#fff',
-      fontSize: 40,
-  },
-  textInput: {
-      zIndex: 0,
-      flex: 1,
-      padding: 20,
-      fontSize: 16,
-      color: '#000',
-      backgroundColor: '#ddd'
-  },
-  footer: {
-    position: 'absolute',
-    width: '100%',
-    height: 100,
-    bottom: 0,
-  },
-  footerInner: {
-    position: 'relative',
-    width: '100%',
-    height: '100%',
-  },
-});
+})
 
-export default App;
+export default App
