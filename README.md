@@ -1,16 +1,26 @@
+# To-Do-List
 
-## ToDo List React-Native with Expo and Typescript
+A React Native todo app built with Expo.
 
-## Installation and Setup Instructions 
+## Stack
 
-#### Example:  
+- Expo SDK 52 · React Native 0.76 · TypeScript 5
+- Tamagui v2 (UI + theming)
+- AsyncStorage · Reanimated 3 · Gesture Handler
 
-Clone down this repository. You will need `node`, `expo` and `yarn` installed globally on your machine.  
+## Features
 
-Installation:
+- Add tasks with priority (Urgent / Normal / Gentle) and due date
+- Drag & drop to reorder
+- Dark / Light theme toggle
+- Persistent local storage
+- Haptic feedback
 
-`yarn`   
+## Getting started
 
-To Start Dev Server:
+```bash
+npm install
+npm start
+```
 
-`expo start`  and click on `run iOS simulator or run Android device/emulator`
+Then scan the QR code with [Expo Go](https://expo.dev/go) or press `i` / `a` for simulator.
