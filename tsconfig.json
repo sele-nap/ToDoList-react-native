@@ -1,15 +1,10 @@
 {
-  "exclude": [
-    "__tests__/**/*-test.ts"
-  ],
+  "exclude": ["__tests__/**/*-test.ts"],
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "jsx": "react-native",
-    "lib": [
-      "dom",
-      "esnext"
-    ],
-    "moduleResolution": "node",
+    "lib": ["dom", "esnext"],
+    "moduleResolution": "bundler",
     "noEmit": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

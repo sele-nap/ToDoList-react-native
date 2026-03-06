@@ -1,125 +1,180 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { StatusBar, TouchableOpacity, StyleSheet } from 'react-native'
-import { SafeAreaView } from 'react-native'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist'
-import * as Haptics from 'expo-haptics'
-import { useFonts, Cinzel_400Regular, Cinzel_700Bold } from '@expo-google-fonts/cinzel'
-import { TamaguiProvider, YStack, Text } from 'tamagui'
+import { Cinzel_400Regular, Cinzel_700Bold, useFonts } from '@expo-google-fonts/cinzel'
 import { Sparkles } from '@tamagui/lucide-icons'
+import * as Haptics from 'expo-haptics'
+import { StatusBar } from 'expo-status-bar'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  AccessibilityInfo,
+  SafeAreaView,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native'
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from 'react-native-draggable-flatlist'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { TamaguiProvider, Text, View } from 'tamagui'
 
-import tamaguiConfig from './tamagui.config'
+import AddTodoModal from './src/components/AddTodoModal'
 import Header from './src/components/Header'
 import TodoItem from './src/components/TodoItem'
-import AddTodoModal from './src/components/AddTodoModal'
-import { Todo, Priority } from './src/types'
+import { Todo } from './src/types'
 import { loadTodos, saveTodos } from './src/utils/storage'
+import config from './tamagui.config'
 
-const App: React.FC = () => {
-  const [todos, setTodos] = useState<Todo[]>([])
-  const [isDark, setIsDark] = useState(true)
-  const [modalVisible, setModalVisible] = useState(false)
-
+export default function App() {
   const [fontsLoaded] = useFonts({ Cinzel_400Regular, Cinzel_700Bold })
+  const [todos, setTodos] = useState<Todo[]>([])
+  const [modalVisible, setModalVisible] = useState(false)
+  const [isDark, setIsDark] = useState(true)
 
   useEffect(() => {
     loadTodos().then(setTodos)
   }, [])
 
-  const persistAndSet = useCallback((updated: Todo[]) => {
+  const persistTodos = useCallback((updated: Todo[]) => {
     setTodos(updated)
     saveTodos(updated)
   }, [])
 
-  const handleAdd = (text: string, priority: Priority, dueDate?: string) => {
-    const newTodo: Todo = {
-      id: Date.now().toString(),
-      text,
-      priority,
-      dueDate,
-      completed: false,
-      createdAt: new Date().toISOString(),
-    }
-    persistAndSet([newTodo, ...todos])
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-  }
-
-  const handleToggleComplete = (id: string) => {
-    const updated = todos.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    persistAndSet(updated)
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-  }
-
-  const handleDelete = (id: string) => {
-    const updated = todos.filter((t) => t.id !== id)
-    persistAndSet(updated)
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-  }
-
-  const completedCount = todos.filter((t) => t.completed).length
-  const bgColor = isDark ? '#0d0814' : '#faf5ff'
-
-  const renderItem = ({ item, drag, isActive }: RenderItemParams<Todo>) => (
-    <ScaleDecorator>
-      <TodoItem
-        todo={item}
-        fontsLoaded={fontsLoaded}
-        onToggleComplete={() => handleToggleComplete(item.id)}
-        onDelete={() => handleDelete(item.id)}
-        drag={drag}
-        isActive={isActive}
-      />
-    </ScaleDecorator>
+  const handleAdd = useCallback(
+    (todo: Todo) => {
+      const updated = [todo, ...todos]
+      persistTodos(updated)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      AccessibilityInfo.announceForAccessibility(`Task "${todo.text}" added`)
+    },
+    [todos, persistTodos],
   )
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      const updated = todos.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+      persistTodos(updated)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      const task = todos.find((t) => t.id === id)
+      if (task) {
+        AccessibilityInfo.announceForAccessibility(
+          task.completed ? `Task unmarked` : `Task completed`
+        )
+      }
+    },
+    [todos, persistTodos],
+  )
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      const task = todos.find((t) => t.id === id)
+      const updated = todos.filter((t) => t.id !== id)
+      persistTodos(updated)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      if (task) {
+        AccessibilityInfo.announceForAccessibility(`Task "${task.text}" deleted`)
+      }
+    },
+    [todos, persistTodos],
+  )
+
+  const handleDragEnd = useCallback(
+    ({ data }: { data: Todo[] }) => {
+      persistTodos(data)
+    },
+    [persistTodos],
+  )
+
+  const renderItem = useCallback(
+    ({ item, drag, isActive }: RenderItemParams<Todo>) => (
+      <ScaleDecorator>
+        <TodoItem
+          todo={item}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
+          onDrag={drag}
+          isActive={isActive}
+          isDark={isDark}
+        />
+      </ScaleDecorator>
+    ),
+    [handleToggle, handleDelete, isDark],
+  )
+
+  if (!fontsLoaded) return null
+
+  const completed = todos.filter((t) => t.completed).length
+  const bgColor = isDark ? '#0d0814' : '#faf5ff'
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme={isDark ? 'dark' : 'light'}>
+      <TamaguiProvider config={config} defaultTheme={isDark ? 'dark' : 'light'}>
         <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
-          <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bgColor} />
+          <StatusBar style={isDark ? 'light' : 'dark'} />
 
           <Header
+            total={todos.length}
+            completed={completed}
             isDark={isDark}
-            fontsLoaded={fontsLoaded}
-            onToggleTheme={() => setIsDark((prev) => !prev)}
-            completedCount={completedCount}
-            totalCount={todos.length}
+            onThemeToggle={() => setIsDark((d) => !d)}
           />
 
           <DraggableFlatList
             data={todos}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
-            onDragEnd={({ data }) => persistAndSet(data)}
-            contentContainerStyle={styles.listContent}
+            onDragEnd={handleDragEnd}
+            contentContainerStyle={styles.list}
             ListEmptyComponent={
-              <YStack alignItems="center" paddingTop="$10" gap="$3">
-                <Text fontSize={52}>🔮</Text>
+              <View style={styles.empty} accessible accessibilityLabel="No tasks yet. Tap the button below to add your first task.">
                 <Text
-                  color="$color10"
-                  fontSize="$4"
-                  fontFamily={fontsLoaded ? 'Cinzel_400Regular' : undefined}
+                  style={{ fontFamily: 'Cinzel_400Regular' }}
+                  color={isDark ? '$color11' : '$color11'}
+                  fontSize={32}
+                  textAlign="center"
+                  marginBottom={12}
+                >
+                  ✨
+                </Text>
+                <Text
+                  style={{ fontFamily: 'Cinzel_700Bold' }}
+                  color={isDark ? '$color9' : '$color9'}
+                  fontSize={16}
+                  textAlign="center"
+                  marginBottom={8}
+                >
+                  No tasks yet
+                </Text>
+                <Text
+                  style={{ fontFamily: 'Cinzel_400Regular' }}
+                  color={isDark ? '$color11' : '$color11'}
+                  fontSize={13}
                   textAlign="center"
                 >
-                  Your grimoire is empty…{'\n'}Add your first spell below.
+                  Tap the{' '}
+                  <Text color="$color7" style={{ fontFamily: 'Cinzel_700Bold' }}>
+                    ✦
+                  </Text>
+                  {' '}button below{'\n'}to add your first quest!
                 </Text>
-              </YStack>
+              </View>
             }
           />
 
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: isDark ? '#7c3aed' : '#6d28d9', shadowColor: '#7c3aed' }]}
+            style={[styles.fab, { backgroundColor: '#7c3aed' }]}
             onPress={() => setModalVisible(true)}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Add new task"
+            accessibilityHint="Opens the form to create a new task"
           >
-            <Sparkles color="white" size={26} />
+            <Sparkles color="white" size={24} />
           </TouchableOpacity>
 
           <AddTodoModal
             visible={modalVisible}
-            fontsLoaded={fontsLoaded}
             onClose={() => setModalVisible(false)}
             onAdd={handleAdd}
+            isDark={isDark}
           />
         </SafeAreaView>
       </TamaguiProvider>
@@ -128,22 +183,34 @@ const App: React.FC = () => {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  listContent: { paddingTop: 12, paddingBottom: 120 },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 32,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+  container: {
+    flex: 1,
+  },
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+    paddingTop: 8,
+  },
+  empty: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
+    paddingTop: 80,
+    paddingHorizontal: 32,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 32,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#7c3aed',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
 })
-
-export default App

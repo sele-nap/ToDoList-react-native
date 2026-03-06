@@ -2,25 +2,20 @@
   "expo": {
     "name": "ToDoList",
     "slug": "todoList",
-    "version": "2.0.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0f0f23"
+      "backgroundColor": "#0d0814"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0f0f23"
-      }
-    },
+    "android": {},
     "web": {
       "favicon": "./assets/favicon.png"
     },

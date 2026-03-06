@@ -1,144 +1,178 @@
-import React from 'react'
-import { TouchableOpacity, StyleSheet } from 'react-native'
-import { XStack, YStack, Text, Card } from 'tamagui'
-import { Trash2, GripVertical, Flame, Clock, Leaf, Calendar, AlertTriangle } from '@tamagui/lucide-icons'
-import { Todo, Priority } from '../types'
+import {
+  Calendar,
+  CheckCircle2,
+  Circle,
+  Flame,
+  GripVertical,
+  Leaf,
+  Timer,
+  Trash2,
+} from '@tamagui/lucide-icons'
+import { StyleSheet, TouchableOpacity } from 'react-native'
+import { Card, Text, XStack, YStack } from 'tamagui'
 
-interface Props {
+import { Priority, Todo } from '../types'
+
+interface TodoItemProps {
   todo: Todo
-  fontsLoaded: boolean
-  onToggleComplete: () => void
-  onDelete: () => void
-  drag: () => void
+  onToggle: (id: string) => void
+  onDelete: (id: string) => void
+  onDrag: () => void
   isActive: boolean
+  isDark: boolean
 }
 
-type PriorityConfig = {
-  color: string
-  bg: string
-  label: string
-  Icon: React.ElementType
+const PRIORITY: Record<Priority, { icon: typeof Flame; color: string; label: string }> = {
+  high: { icon: Flame, color: '#ef4444', label: 'High' },
+  medium: { icon: Timer, color: '#d97706', label: 'Medium' },
+  low: { icon: Leaf, color: '#16a34a', label: 'Low' },
 }
 
-const PRIORITY: Record<Priority, PriorityConfig> = {
-  high: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', label: 'Urgent', Icon: Flame },
-  medium: { color: '#d97706', bg: 'rgba(217,119,6,0.12)', label: 'Normal', Icon: Clock },
-  low: { color: '#16a34a', bg: 'rgba(22,163,74,0.12)', label: 'Gentle', Icon: Leaf },
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const formatDate = (iso: string): string => {
-  const target = new Date(iso)
-  target.setHours(0, 0, 0, 0)
+function isOverdue(dateStr: string): boolean {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const diff = Math.round((target.getTime() - today.getTime()) / 86400000)
-  if (diff < 0) return `${Math.abs(diff)}d overdue`
-  if (diff === 0) return 'Today'
-  if (diff === 1) return 'Tomorrow'
-  return target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return new Date(dateStr) < today
 }
 
-const isOverdue = (iso?: string, completed?: boolean) => {
-  if (!iso || completed) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return new Date(iso) < today
-}
+export default function TodoItem({
+  todo,
+  onToggle,
+  onDelete,
+  onDrag,
+  isActive,
+  isDark,
+}: TodoItemProps) {
+  const priority = PRIORITY[todo.priority]
+  const PriorityIcon = priority.icon
+  const overdue = todo.dueDate && !todo.completed && isOverdue(todo.dueDate)
 
-const TodoItem: React.FC<Props> = ({ todo, fontsLoaded, onToggleComplete, onDelete, drag, isActive }) => {
-  const p = PRIORITY[todo.priority]
-  const PriorityIcon = p.Icon
-  const overdue = isOverdue(todo.dueDate, todo.completed)
+  const cardBg = isDark
+    ? isActive ? '#2d1f45' : '#1e1530'
+    : isActive ? '#ede9fe' : '#ffffff'
+  const borderColor = overdue ? '#ef4444' : isDark ? '#2d1f45' : '#ddd6fe'
+  const textColor = isDark ? '#f3e8ff' : '#1e1038'
+  const mutedColor = isDark ? '#a78bca' : '#6b4fa0'
 
   return (
     <Card
-      marginHorizontal="$3"
-      marginVertical="$1.5"
-      borderRadius="$5"
+      marginBottom={10}
+      padding={14}
+      borderRadius={14}
       borderWidth={1}
-      borderColor={isActive ? '$color6' : '$color4'}
-      backgroundColor={isActive ? '$color3' : '$color2'}
-      overflow="hidden"
+      style={{
+        backgroundColor: cardBg,
+        borderColor,
+        shadowColor: '#7c3aed',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: isActive ? 0.3 : 0.1,
+        shadowRadius: 4,
+        elevation: isActive ? 6 : 2,
+      }}
+      accessible={false}
     >
-      <XStack alignItems="center">
-        <XStack width={4} backgroundColor={p.color} alignSelf="stretch" />
-
-        <TouchableOpacity onPress={onToggleComplete} style={styles.checkBtn}>
-          <XStack
-            width={24}
-            height={24}
-            borderRadius={12}
-            borderWidth={2}
-            borderColor={todo.completed ? p.color : '$color5'}
-            backgroundColor={todo.completed ? p.color : 'transparent'}
-            alignItems="center"
-            justifyContent="center"
-          >
-            {todo.completed && (
-              <Text color="white" fontSize={13} fontWeight="bold" lineHeight={16}>✓</Text>
-            )}
-          </XStack>
+      <XStack alignItems="center" gap={10}>
+        {/* Checkbox */}
+        <TouchableOpacity
+          onPress={() => onToggle(todo.id)}
+          style={styles.touchTarget}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: todo.completed }}
+          accessibilityLabel={todo.completed ? `Mark "${todo.text}" as incomplete` : `Mark "${todo.text}" as complete`}
+        >
+          {todo.completed ? (
+            <CheckCircle2 size={24} color="#7c3aed" />
+          ) : (
+            <Circle size={24} color={mutedColor} />
+          )}
         </TouchableOpacity>
 
-        <YStack flex={1} paddingVertical="$3" paddingRight="$2" gap="$1.5">
+        {/* Content */}
+        <YStack flex={1} gap={4}>
           <Text
-            color={todo.completed ? '$color9' : '$color12'}
-            fontSize={15}
-            fontWeight="500"
+            style={{ fontFamily: 'Cinzel_400Regular' }}
+            fontSize={14}
+            color={todo.completed ? mutedColor : textColor}
             textDecorationLine={todo.completed ? 'line-through' : 'none'}
             numberOfLines={2}
-            fontFamily={fontsLoaded ? 'Cinzel_400Regular' : undefined}
-            letterSpacing={0.3}
+            accessibilityLabel={todo.text}
           >
             {todo.text}
           </Text>
 
-          <XStack gap="$2" alignItems="center" flexWrap="wrap">
-            <XStack paddingHorizontal="$2" paddingVertical={3} borderRadius="$10" backgroundColor={p.bg} alignItems="center" gap={4}>
-              <PriorityIcon color={p.color} size={11} />
-              <Text color={p.color} fontSize={11} fontWeight="700">{p.label}</Text>
+          <XStack gap={10} alignItems="center">
+            {/* Priority badge */}
+            <XStack alignItems="center" gap={3} accessibilityLabel={`Priority: ${priority.label}`}>
+              <PriorityIcon size={11} color={priority.color} />
+              <Text fontSize={10} color={priority.color} style={styles.badge}>
+                {priority.label}
+              </Text>
             </XStack>
 
+            {/* Due date */}
             {todo.dueDate && (
-              <XStack alignItems="center" gap={4}>
-                {overdue ? <AlertTriangle color="#ef4444" size={12} /> : <Calendar color="$color10" size={12} />}
-                <Text color={overdue ? '#ef4444' : '$color10'} fontSize={12}>
-                  {formatDate(todo.dueDate)}
+              <XStack
+                alignItems="center"
+                gap={3}
+                accessibilityLabel={
+                  overdue
+                    ? `Overdue since ${formatDate(todo.dueDate)}`
+                    : `Due on ${formatDate(todo.dueDate)}`
+                }
+              >
+                <Calendar size={11} color={overdue ? '#ef4444' : mutedColor} />
+                <Text
+                  fontSize={10}
+                  color={overdue ? '#ef4444' : mutedColor}
+                  style={styles.badge}
+                >
+                  {overdue ? '⚠ ' : ''}{formatDate(todo.dueDate)}
                 </Text>
               </XStack>
             )}
           </XStack>
         </YStack>
 
-        <YStack gap="$2" paddingHorizontal="$2" alignItems="center">
-          <TouchableOpacity onPress={onDelete} style={styles.deleteBtn}>
-            <Trash2 color="#ef4444" size={16} />
-          </TouchableOpacity>
-          <TouchableOpacity onLongPress={drag} style={styles.dragBtn}>
-            <GripVertical color="#8b5cf6" size={18} />
-          </TouchableOpacity>
-        </YStack>
+        {/* Delete */}
+        <TouchableOpacity
+          onPress={() => onDelete(todo.id)}
+          style={styles.touchTarget}
+          accessibilityRole="button"
+          accessibilityLabel={`Delete task: ${todo.text}`}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Trash2 size={16} color={mutedColor} />
+        </TouchableOpacity>
+
+        {/* Drag handle */}
+        <TouchableOpacity
+          onLongPress={onDrag}
+          style={styles.touchTarget}
+          delayLongPress={100}
+          accessibilityRole="button"
+          accessibilityLabel="Hold to reorder task"
+          accessibilityHint="Long press and drag to change the position of this task"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <GripVertical size={18} color={mutedColor} />
+        </TouchableOpacity>
       </XStack>
     </Card>
   )
 }
 
 const styles = StyleSheet.create({
-  checkBtn: { padding: 14, paddingRight: 10 },
-  deleteBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  badge: {
+    fontFamily: 'Cinzel_400Regular',
   },
-  dragBtn: {
-    width: 34,
-    height: 34,
+  touchTarget: {
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
 })
-
-export default TodoItem

@@ -10,13 +10,15 @@ web-build/
 ios/
 android/
 
+# Tamagui
+.tamagui/
+
 # Environment
 .env
 .env.local
 .env.*.local
 
-# Build & cache
-.tamagui/
+# TypeScript
 *.tsbuildinfo
 
 # Logs
@@ -24,10 +26,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# macOS
+# OS
 .DS_Store
+Thumbs.db
 
 # Editor
 .vscode/
 .idea/
 *.swp
+*.swo

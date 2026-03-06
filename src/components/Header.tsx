@@ -1,71 +1,82 @@
-import React from 'react'
-import { StyleSheet, View, TouchableOpacity } from 'react-native'
-import { YStack, XStack, Text } from 'tamagui'
 import { Moon, Sun, Wand2 } from '@tamagui/lucide-icons'
+import { StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Text, XStack, YStack } from 'tamagui'
 
-interface Props {
+interface HeaderProps {
+  total: number
+  completed: number
   isDark: boolean
-  fontsLoaded: boolean
-  onToggleTheme: () => void
-  completedCount: number
-  totalCount: number
+  onThemeToggle: () => void
 }
 
-const Header: React.FC<Props> = ({ isDark, fontsLoaded, onToggleTheme, completedCount, totalCount }) => {
-  const progress = totalCount > 0 ? completedCount / totalCount : 0
-  const accent = isDark ? '#c084fc' : '#7c3aed'
-  const surface = isDark ? '#160b2a' : '#f3e8ff'
-  const border = isDark ? '#3b1a6e' : '#c084fc'
-  const textPrimary = isDark ? '#f5f3ff' : '#1e1038'
-  const textSecondary = isDark ? '#a78bfa' : '#5b21b6'
-  const progressBg = isDark ? 'rgba(124,58,237,0.18)' : 'rgba(124,58,237,0.1)'
-  const progressFill = isDark ? '#c084fc' : '#7c3aed'
-  const toggleBg = isDark ? 'rgba(124,58,237,0.25)' : 'rgba(124,58,237,0.12)'
+export default function Header({ total, completed, isDark, onThemeToggle }: HeaderProps) {
+  const progress = total > 0 ? completed / total : 0
+  const textColor = isDark ? '#f3e8ff' : '#1e1038'
+  const mutedColor = isDark ? '#a78bca' : '#6b4fa0'
+  const trackColor = isDark ? '#2d1f45' : '#ddd6fe'
+  const fillColor = '#7c3aed'
+  const allDone = total > 0 && completed === total
 
   return (
-    <YStack
-      backgroundColor={surface}
-      paddingHorizontal="$5"
-      paddingTop="$5"
-      paddingBottom="$5"
-      borderBottomWidth={1}
-      borderBottomColor={border}
-      gap="$2"
-    >
-      <XStack justifyContent="space-between" alignItems="center">
-        <XStack alignItems="center" gap="$2">
-          <Wand2 color={accent} size={22} />
+    <YStack paddingHorizontal={20} paddingTop={40} paddingBottom={12} gap={12}>
+      <XStack alignItems="center" justifyContent="space-between">
+        <XStack alignItems="center" gap={8}>
+          <Wand2 size={20} color={fillColor} />
           <Text
-            color={textPrimary}
-            fontSize={26}
-            fontWeight="700"
-            letterSpacing={1.5}
-            fontFamily={fontsLoaded ? 'Cinzel_700Bold' : undefined}
+            style={{ fontFamily: 'Cinzel_700Bold' }}
+            fontSize={22}
+            color={textColor}
+            letterSpacing={1}
+            accessibilityRole="header"
           >
-            Grimoire
+            My List
           </Text>
         </XStack>
 
         <TouchableOpacity
-          onPress={onToggleTheme}
-          style={[styles.toggleBtn, { backgroundColor: toggleBg, borderColor: border }]}
-          activeOpacity={0.7}
+          onPress={onThemeToggle}
+          style={styles.toggleBtn}
+          accessibilityRole="button"
+          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          {isDark ? <Sun color="#f5d76e" size={18} /> : <Moon color="#7c3aed" size={18} />}
+          {isDark ? <Sun size={20} color={mutedColor} /> : <Moon size={20} color={mutedColor} />}
         </TouchableOpacity>
       </XStack>
 
-      <Text
-        color={textSecondary}
-        fontSize={13}
-        fontFamily={fontsLoaded ? 'Cinzel_400Regular' : undefined}
-        letterSpacing={0.8}
-      >
-        {completedCount} / {totalCount} {completedCount === 1 ? 'spell' : 'spells'} cast
-      </Text>
+      <XStack alignItems="center" justifyContent="space-between">
+        <Text
+          style={{ fontFamily: 'Cinzel_400Regular' }}
+          fontSize={12}
+          color={allDone ? '#7c3aed' : mutedColor}
+          letterSpacing={0.5}
+          accessibilityLabel={`${completed} of ${total} tasks completed`}
+          accessibilityLiveRegion="polite"
+        >
+          {allDone && total > 0 ? '✨ All done!' : `${completed} / ${total} completed`}
+        </Text>
+        {total > 0 && (
+          <Text fontSize={11} color={allDone ? '#7c3aed' : mutedColor}>
+            {Math.round(progress * 100)}%
+          </Text>
+        )}
+      </XStack>
 
-      <View style={[styles.progressTrack, { backgroundColor: progressBg }]}>
-        <View style={[styles.progressFill, { backgroundColor: progressFill, width: `${progress * 100}%` }]} />
+      <View
+        style={[styles.track, { backgroundColor: trackColor }]}
+        accessibilityRole="progressbar"
+        accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
+        accessibilityLabel="Task completion progress"
+      >
+        <View
+          style={[
+            styles.fill,
+            {
+              backgroundColor: allDone ? '#16a34a' : fillColor,
+              width: `${progress * 100}%` as `${number}%`,
+            },
+          ]}
+        />
       </View>
     </YStack>
   )
@@ -73,23 +84,18 @@ const Header: React.FC<Props> = ({ isDark, fontsLoaded, onToggleTheme, completed
 
 const styles = StyleSheet.create({
   toggleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressTrack: {
-    height: 3,
-    borderRadius: 2,
+  track: {
+    height: 6,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginTop: 4,
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
+  fill: {
+    height: 6,
+    borderRadius: 3,
   },
 })
-
-export default Header
