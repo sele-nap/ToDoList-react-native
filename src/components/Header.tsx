@@ -1,4 +1,4 @@
-import { Moon, Sun, Wand2 } from '@tamagui/lucide-icons'
+import { BarChart2, Moon, Sun, Wand2 } from '@tamagui/lucide-icons'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import { Text, XStack, YStack } from 'tamagui'
 
@@ -7,9 +7,10 @@ interface HeaderProps {
   completed: number
   isDark: boolean
   onThemeToggle: () => void
+  onStatsPress: () => void
 }
 
-export default function Header({ total, completed, isDark, onThemeToggle }: HeaderProps) {
+export default function Header({ total, completed, isDark, onThemeToggle, onStatsPress }: HeaderProps) {
   const progress = total > 0 ? completed / total : 0
   const textColor = isDark ? '#f3e8ff' : '#1e1038'
   const mutedColor = isDark ? '#a78bca' : '#6b4fa0'
@@ -33,15 +34,26 @@ export default function Header({ total, completed, isDark, onThemeToggle }: Head
           </Text>
         </XStack>
 
-        <TouchableOpacity
-          onPress={onThemeToggle}
-          style={styles.toggleBtn}
-          accessibilityRole="button"
-          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          {isDark ? <Sun size={20} color={mutedColor} /> : <Moon size={20} color={mutedColor} />}
-        </TouchableOpacity>
+        <XStack gap={4} alignItems="center">
+          <TouchableOpacity
+            onPress={onStatsPress}
+            style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel="View statistics"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <BarChart2 size={20} color={mutedColor} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onThemeToggle}
+            style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            {isDark ? <Sun size={20} color={mutedColor} /> : <Moon size={20} color={mutedColor} />}
+          </TouchableOpacity>
+        </XStack>
       </XStack>
 
       <XStack alignItems="center" justifyContent="space-between">
@@ -83,7 +95,7 @@ export default function Header({ total, completed, isDark, onThemeToggle }: Head
 }
 
 const styles = StyleSheet.create({
-  toggleBtn: {
+  iconBtn: {
     minWidth: 44,
     minHeight: 44,
     alignItems: 'center',

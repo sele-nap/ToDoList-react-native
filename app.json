@@ -15,10 +15,17 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {},
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0d0814"
+      }
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": []
+    "plugins": [
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#7c3aed" }]
+    ]
   }
 }
